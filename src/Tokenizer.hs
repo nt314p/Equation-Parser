@@ -1,60 +1,51 @@
 module Tokenizer
-( getTokens
-, tokensToString
-, getTokenValue
-, getTokenType
-) where
+  ( getTokens,
+    tokensToString,
+  )
+where
 
 import qualified Data.Char (isAlpha, isDigit)
-import qualified Syntax (Token, TokenType)
+import Syntax (Token (..), TokenType (..), getTokenType, getTokenValue)
 
-tokensToString :: [Syntax.Token] -> String
-tokensToString tokens = 
-    concat $ map (++"\n") $ map show $ zip tValues tTypes
-  where
-    tValues = map getTokenValue tokens
-    tTypes = map getTokenType tokens
+tokensToString :: [Token] -> String
+tokensToString = concatMap (\(Token tVal tType) -> show (tVal, tType) ++ "\n")
 
-getTokens :: String -> [Syntax.Token]
+getTokens :: String -> [Token]
 getTokens s = getTokensRecursive s []
 
 getTokensRecursive :: String -> [Syntax.Token] -> [Syntax.Token]
 getTokensRecursive "" tokens = tokens
-getTokensRecursive (x:xs) tokens = 
-    {-
-    if the previous and current types match, and the types are mergeable
-    we reconstruct the previous token by adding the current value to it 
-    -}
-    if getTokenType previousToken == currentTokenType && isMergeableTokenType currentTokenType
-    then getTokensRecursive xs $ (init tokens) ++ [Token (getTokenValue previousToken++[x]) currentTokenType]
+getTokensRecursive (x : xs) tokens =
+  {-
+  if the previous and current types match, and the types are mergeable
+  we reconstruct the previous token by adding the current value to it
+  -}
+  if getTokenType previousToken == currentTokenType && isMergeableTokenType currentTokenType
+    then getTokensRecursive xs $ init tokens ++ [Token (getTokenValue previousToken ++ [x]) currentTokenType]
     else getTokensRecursive xs $ tokens ++ [Token [x] currentTokenType]
   where
     currentTokenType = charToToken x
     previousToken =
-        if null tokens 
-        then Token "" Bad
+      if null tokens
+        then Token "" BadToken
         else last tokens
 
 charToToken :: Char -> Syntax.TokenType
-charToToken c = 
-    if Data.Char.isAlpha c
-    then Identifier
-    else if Data.Char.isDigit c || c == '.'
-    then Number
-    else
-        case c of
-            '(' -> OpenParenthesis
-            ')' -> CloseParenthesis
-            '+' -> Plus
-            '-' -> Minus
-            '*' -> Asterisk
-            '/' -> ForwardSlash
-            '^' -> Caret
-            '=' -> Equals
-            ' '  -> Whitespace
-            _ -> Bad 
+charToToken c
+  | Data.Char.isAlpha c = IdentifierToken
+  | Data.Char.isDigit c || c == '.' = NumberToken
+  | otherwise =
+    case c of
+      '(' -> OpenParenthesisToken
+      ')' -> CloseParenthesisToken
+      '+' -> PlusToken
+      '-' -> MinusToken
+      '*' -> AsteriskToken
+      '/' -> ForwardSlashToken
+      '^' -> CaretToken
+      '=' -> EqualsToken
+      ' ' -> WhitespaceToken
+      _ -> BadToken
 
 isMergeableTokenType :: Syntax.TokenType -> Bool
-isMergeableTokenType t = t == Identifier || t == Number
-
-
+isMergeableTokenType t = t == IdentifierToken || t == NumberToken
