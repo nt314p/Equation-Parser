@@ -1,28 +1,21 @@
-module Tokenizer
-  ( getTokens,
-    tokensToString,
-  )
-where
+module Tokenizer (getTokens) where
 
 import qualified Data.Char (isAlpha, isDigit)
-import Syntax (Token (..), TokenType (..), getTokenType, getTokenValue)
-
-tokensToString :: [Token] -> String
-tokensToString = concatMap (\(Token tVal tType) -> show (tVal, tType) ++ "\n")
+import Syntax (Token (..), TokenType (..))
 
 getTokens :: String -> [Token]
-getTokens s = getTokensRecursive s []
+getTokens s = getTokens' s []
 
-getTokensRecursive :: String -> [Syntax.Token] -> [Syntax.Token]
-getTokensRecursive "" tokens = tokens
-getTokensRecursive (x : xs) tokens =
+getTokens' :: String -> [Syntax.Token] -> [Syntax.Token]
+getTokens' "" tokens = tokens
+getTokens' (x : xs) tokens =
   {-
   if the previous and current types match, and the types are mergeable
   we reconstruct the previous token by adding the current value to it
   -}
-  if getTokenType previousToken == currentTokenType && isMergeableTokenType currentTokenType
-    then getTokensRecursive xs $ init tokens ++ [Token (getTokenValue previousToken ++ [x]) currentTokenType]
-    else getTokensRecursive xs $ tokens ++ [Token [x] currentTokenType]
+  if tokenType previousToken == currentTokenType && isMergeableTokenType currentTokenType
+    then getTokens' xs $ init tokens ++ [Token (tokenValue previousToken ++ [x]) currentTokenType]
+    else getTokens' xs $ tokens ++ [Token [x] currentTokenType]
   where
     currentTokenType = charToToken x
     previousToken =
