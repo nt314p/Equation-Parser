@@ -1,0 +1,11 @@
+cradle:
+  multi:
+    - path: ./
+      config:
+        cradle:
+          cabal:
+            component: "lib:project"
+    - path: ./Setup.hs
+      config:
+        cradle:
+          none:

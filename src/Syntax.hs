@@ -40,9 +40,8 @@ tokensToString :: [Token] -> String
 tokensToString = concatMap (\(Token tVal tType) -> show (tVal, tType) ++ "\n")
 
 data EquationToken = EquationToken
-  { equationTokenValue :: String,
-    equationTokenType :: EquationTokenType,
-    numericalValue :: Double
+  { equationTokenValue :: Either String Double,
+    equationTokenType :: EquationTokenType
   }
   deriving (Show)
 
@@ -74,7 +73,12 @@ data EquationTokenType
   deriving (Show, Eq)
 
 equationTokensToString :: [EquationToken] -> String
-equationTokensToString = concatMap (\(EquationToken tVal tType num) -> show (tVal, tType) ++ "\n")
+equationTokensToString = concatMap (\(EquationToken tVal tType) -> show (toStringValue tVal, tType) ++ "\n")
+
+toStringValue :: Either String Double -> String
+toStringValue val = case val of 
+  Left str -> str 
+  Right num -> show num
 
 isOperand :: EquationTokenType -> Bool
 isOperand t = t == NumericalOperand || t == VariableOperand
@@ -111,5 +115,6 @@ operatorPriority t
   | t `elem` [AdditionOperator, SubtractionOperator] = 1
   | t `elem` [MultiplicationOperator, DivisionOperator] = 2
   | t == ExponentiationOperator = 3
+  | t == EqualsOperator = 0
   | isUnaryOperator t = 4
-  | otherwise = error "operatorPriority: token is not an operator"
+  | otherwise = -1

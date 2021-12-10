@@ -1,9 +1,9 @@
 module Main where
 
-import qualified Parser (tokensToEquationTokens, infixToPostfix)
-import Syntax (EquationToken (..), Token (..), EquationTokenType (..), equationTokensToString, tokensToString)
-import qualified Tokenizer (getTokens)
 import Data.Either (isLeft)
+import qualified Parser (infixToPostfix, operatorPopCount, tokensToEquationTokens)
+import Syntax (EquationToken (..), EquationTokenType (..), Token (..), equationTokensToString, tokensToString)
+import qualified Tokenizer (getTokens)
 
 tokens :: [Syntax.Token]
 tokens = Tokenizer.getTokens "k=-9sin(x)^2+5.3b"
@@ -11,13 +11,23 @@ tokens = Tokenizer.getTokens "k=-9sin(x)^2+5.3b"
 equationTokens :: Either String [Syntax.EquationToken]
 equationTokens = Parser.tokensToEquationTokens tokens
 
-a = EquationToken "a" VariableOperand 0.0
-plus = EquationToken "+" AdditionOperator 0.0
-b = EquationToken "b" VariableOperand 0.0
+a = EquationToken (Left "a") VariableOperand
 
+plus = EquationToken (Left "+") AdditionOperator
+
+times = EquationToken (Left "*") MultiplicationOperator
+
+sub = EquationToken (Left "-") SubtractionOperator
+
+b = EquationToken (Left "b") VariableOperand
+
+s1 :: String
+s1 = Syntax.equationTokensToString $ Parser.infixToPostfix [a, plus, b]
+
+s2 = show $ Parser.operatorPopCount [plus, times, sub] ExponentiationOperator
 
 main :: IO ()
-main = 
+main =
   case equationTokens of
     Left str -> putStrLn str
-    Right eqTokens -> putStrLn $ Syntax.equationTokensToString $ Parser.infixToPostfix [a, plus, b]
+    Right eqTokens -> putStrLn $ equationTokensToString $ Parser.infixToPostfix eqTokens

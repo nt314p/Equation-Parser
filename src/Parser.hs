@@ -1,4 +1,4 @@
-module Parser (tokensToEquationTokens, infixToPostfix) where
+module Parser (tokensToEquationTokens, infixToPostfix, operatorPopCount) where
 
 import Data.Either (fromRight, isLeft, isRight)
 import Syntax
@@ -21,7 +21,7 @@ tokensToEquationTokens tokens
   | parenthesisCount > 0 = Left $ "Unmatched open parenthesis: " ++ show parenthesisCount
   | isOperator $ equationTokenType $ last rightEquationTokens = Left "Expression cannot end with operator"
   | otherwise =
-    case length $ filter (\(EquationToken _ t _) -> t == EqualsOperator) rightEquationTokens of
+    case length $ filter (\(EquationToken _ t) -> t == EqualsOperator) rightEquationTokens of
       0 -> Left "Expression must contain equals operator"
       1 ->
         if equationTokenType (head rightEquationTokens) /= VariableOperand
@@ -52,7 +52,7 @@ tokensToEquationTokens' (t : ts) equationTokens
         else impliedMultiplyToken ++ [currentEquationToken]
 
     impliedMultiplyToken =
-      [ EquationToken "*" MultiplicationOperator 0.0
+      [ EquationToken (Left "*") MultiplicationOperator
         | hasImpliedMultiply previousEquationTokenType currentEquationTokenType
       ]
 
@@ -63,14 +63,13 @@ tokensToEquationTokens' (t : ts) equationTokens
       if currentEquationTokenType == NumericalOperand
         then
           EquationToken
-            currentTokenValue
+            (Right $ read currentTokenValue)
             currentEquationTokenType
-            (read currentTokenValue :: Double)
-        else EquationToken currentTokenValue currentEquationTokenType 0.0
+        else EquationToken (Left currentTokenValue) currentEquationTokenType
 
     previousEquationToken =
       if null equationTokens
-        then EquationToken "" Bad 0.0 -- just a filler value
+        then EquationToken (Left "") Bad -- just a filler value
         else last equationTokens
 
     currentEquationTokenType = case currentTokenType of
@@ -100,7 +99,7 @@ infixToPostfix' postfixTokens opStack [] =
   postfixTokens ++ filter (not . isParenthesis . equationTokenType) opStack
 infixToPostfix' postfixTokens opStack (t : ts)
   | isOperand currentType = infixToPostfix' (postfixTokens ++ [t]) opStack ts
-  | isOperator currentType = infixToPostfix' (postfixTokens ++ take opPopCount opStack) (drop opPopCount opStack) ts
+  | isOperator currentType = infixToPostfix' (postfixTokens ++ take opPopCount opStack) (t : drop opPopCount opStack) ts
   | isParenthesis currentType =
     if currentType == OpenParenthesis
       then infixToPostfix' postfixTokens (t : opStack) ts
@@ -179,7 +178,7 @@ openParenthesisIndex :: [EquationToken] -> Int
 openParenthesisIndex equationTokens = openParenthesisIndex' equationTokens 0
 
 openParenthesisIndex' :: [EquationToken] -> Int -> Int
-openParenthesisIndex' [] _ = error "Open parenthesis was not found - but should have"
+openParenthesisIndex' [] _ = error "openParenthesisIndex: Open parenthesis was not found - but should have"
 openParenthesisIndex' (t : ts) n
   | equationTokenType t == OpenParenthesis = n
   | otherwise = openParenthesisIndex' ts n + 1
@@ -189,7 +188,7 @@ countParenthesis equationTokens = countParenthesis' equationTokens 0
 
 countParenthesis' :: [EquationToken] -> Int -> Int
 countParenthesis' [] n = n
-countParenthesis' (t:ts) n = countParenthesis' ts n+dn
+countParenthesis' (t : ts) n = countParenthesis' ts n + dn
   where
     dn = case equationTokenType t of
       OpenParenthesis -> 1
